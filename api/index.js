@@ -17,15 +17,15 @@ const pool = mysql.createPool({
 
 // Swagger 설정
 const options = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "My API",
-      version: "1.0.0",
+    definition: {
+      openapi: "3.0.0",
+      info: {
+        title: "My API",
+        version: "1.0.0",
+      },
     },
-  },
-  apis: ["./api/index.js"],
-};
+    apis: [__filename], // 현재 파일만 읽게 변경
+  };
 
 const swaggerSpec = swaggerJsdoc(options);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
