@@ -30,7 +30,11 @@ const options = {
 const swaggerSpec = swaggerJsdoc(options);
 
 // Swagger UI
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use(
+    "/api-docs",
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, { explorer: true })
+  );
 
 // Swagger JSON 디버깅용 라우트 (Swagger 스펙 확인용)
 app.get("/swagger.json", (req, res) => {
