@@ -7,10 +7,9 @@ const app = express();
 app.use(bodyParser.json());
 
 // =========================
-// 🔹 DB 풀 캐싱 함수
+// 🔹 DB 풀 캐싱 (Vercel 최적화)
 // =========================
 let poolPromise;
-
 async function getPool() {
   if (!poolPromise) {
     const pool = new sql.ConnectionPool({
@@ -20,17 +19,17 @@ async function getPool() {
       server: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT, 10),
       options: {
-        encrypt: false, // Azure면 true
+        encrypt: false, // Azure 같은 경우 true
         trustServerCertificate: true,
       },
     });
 
     poolPromise = pool.connect()
-      .then(p => {
+      .then((p) => {
         console.log("✅ DB Connected");
         return p;
       })
-      .catch(err => {
+      .catch((err) => {
         poolPromise = null;
         console.error("❌ DB Connection Failed:", err);
         throw err;
@@ -56,7 +55,6 @@ const options = {
 const swaggerSpec = swaggerJsdoc(options);
 
 app.get("/swagger.json", (req, res) => res.json(swaggerSpec));
-
 app.get("/docs", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -78,6 +76,23 @@ app.get("/docs", (req, res) => {
   `);
 });
 
+// =========================
+// 🔹 Health Check
+// =========================
+app.get("/health", async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query("SELECT GETDATE() as now");
+    res.json({ status: "ok", now: result.recordset[0].now });
+  } catch (err) {
+    console.error("❌ /health error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =========================
+// 🔹 Phone Request
+// =========================
 /**
  * @openapi
  * /phone/request:
@@ -93,12 +108,20 @@ app.post("/phone/request", async (req, res) => {
     request.input("p_purpose", sql.VarChar(20), purpose || "SIGNUP");
 
     const result = await request.execute("PRC_COF_PHONE_REQUEST");
-    res.json(result.recordset || result.output);
+    res.json({
+      recordset: result.recordset || [],
+      output: result.output || {},
+      rowsAffected: result.rowsAffected || [],
+    });
   } catch (err) {
+    console.error("❌ /phone/request error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
+// =========================
+// 🔹 Phone Verify
+// =========================
 /**
  * @openapi
  * /phone/verify:
@@ -115,12 +138,20 @@ app.post("/phone/verify", async (req, res) => {
     request.input("p_purpose", sql.VarChar(20), purpose || "SIGNUP");
 
     const result = await request.execute("PRC_COF_PHONE_VERIFY");
-    res.json(result.recordset || result.output);
+    res.json({
+      recordset: result.recordset || [],
+      output: result.output || {},
+      rowsAffected: result.rowsAffected || [],
+    });
   } catch (err) {
+    console.error("❌ /phone/verify error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
+// =========================
+// 🔹 Signup
+// =========================
 /**
  * @openapi
  * /signup:
@@ -151,7 +182,6 @@ app.post("/signup", async (req, res) => {
     request.input("p_device_id", sql.NVarChar(100), input.device_id);
     request.input("p_app_version", sql.VarChar(20), input.app_version);
 
-    // 출력 파라미터
     request.output("p_user_id", sql.Int);
     request.output("p_session_id", sql.NVarChar(50));
     request.output("p_result_code", sql.VarChar(50));
@@ -160,26 +190,14 @@ app.post("/signup", async (req, res) => {
     const result = await request.execute("PRC_COF_USER_SIGNUP");
 
     res.json({
-      user_id: result.output.p_user_id,
-      session_id: result.output.p_session_id,
-      result_code: result.output.p_result_code,
-      result_message: result.output.p_result_message,
+      output: result.output || {},
+      recordset: result.recordset || [],
+      rowsAffected: result.rowsAffected || [],
     });
   } catch (err) {
+    console.error("❌ /signup error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 module.exports = app;
-
-
-app.get("/health", async (req, res) => {
-  try {
-    const pool = await getPool();
-    const result = await pool.request().query("SELECT GETDATE() as now");
-    res.json({ status: "ok", db_time: result.recordset[0].now });
-  } catch (err) {
-    console.error("❌ DB health check error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
