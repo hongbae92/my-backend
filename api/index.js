@@ -17,18 +17,25 @@ const pool = mysql.createPool({
 
 // Swagger 설정
 const options = {
-    definition: {
-      openapi: "3.0.0",
-      info: {
-        title: "My API",
-        version: "1.0.0",
-      },
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "My API",
+      version: "1.0.0",
     },
-    apis: [__filename], // 현재 파일만 읽게 변경
-  };
+  },
+  apis: ["./api/*.js"], // api 폴더 안 js 파일 전체 검색
+};
 
 const swaggerSpec = swaggerJsdoc(options);
+
+// Swagger UI
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Swagger JSON 디버깅용 라우트 (Swagger 스펙 확인용)
+app.get("/swagger.json", (req, res) => {
+  res.json(swaggerSpec);
+});
 
 // API
 /**
@@ -56,8 +63,6 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
  *       200:
  *         description: 생성된 사용자 반환
  */
-
-
 app.get("/users", async (req, res) => {
   const [rows] = await pool.query("SELECT * FROM users");
   res.json(rows);
