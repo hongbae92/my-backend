@@ -171,3 +171,15 @@ app.post("/signup", async (req, res) => {
 });
 
 module.exports = app;
+
+
+app.get("/health", async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query("SELECT GETDATE() as now");
+    res.json({ status: "ok", db_time: result.recordset[0].now });
+  } catch (err) {
+    console.error("❌ DB health check error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
