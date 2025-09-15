@@ -124,6 +124,30 @@ app.get("/health", async (req, res) => {
  *     responses:
  *       200:
  *         description: 인증번호 발송 결과
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 output:
+ *                   type: object
+ *                   properties:
+ *                     p_verification_code:
+ *                       type: string
+ *                       example: "426440"
+ *                     p_result_code:
+ *                       type: string
+ *                       enum: [SUCCESS, INVALID_PHONE, TOO_MANY_REQUESTS, PHONE_DUPLICATE, ERROR]
+ *                       example: SUCCESS
+ *                     p_result_message:
+ *                       type: string
+ *                       example: "인증번호가 발송되었습니다."
+ *                 recordset:
+ *                   type: array
+ *                   items: {}
+ *                 rowsAffected:
+ *                   type: array
+ *                   items: {}
  */
 app.post("/phone/request", async (req, res) => {
   try {
@@ -182,6 +206,33 @@ app.post("/phone/request", async (req, res) => {
  *                 type: string
  *                 description: "인증 목적 (기본값 SIGNUP)"
  *                 example: "SIGNUP"
+ *     responses:
+ *       200:
+ *         description: 인증번호 확인 결과
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 output:
+ *                   type: object
+ *                   properties:
+ *                     p_verification_id:
+ *                       type: integer
+ *                       example: 6
+ *                     p_result_code:
+ *                       type: string
+ *                       enum: [SUCCESS, NO_VERIFICATION, EXPIRED, TOO_MANY_ATTEMPTS, INVALID_CODE, ERROR]
+ *                       example: SUCCESS
+ *                     p_result_message:
+ *                       type: string
+ *                       example: "휴대폰 인증이 완료되었습니다."
+ *                 recordset:
+ *                   type: array
+ *                   items: {}
+ *                 rowsAffected:
+ *                   type: array
+ *                   items: {}
  */
 app.post("/phone/verify", async (req, res) => {
   try {
@@ -230,73 +281,86 @@ app.post("/phone/verify", async (req, res) => {
  *             properties:
  *               validation_mode:
  *                 type: string
- *                 description: "검증 모드 (기본값 FULL_SIGNUP)"
  *                 example: "FULL_SIGNUP"
  *               email:
  *                 type: string
- *                 description: "사용자 이메일 (로그인 계정)"
  *                 example: "coffeeuser@example.com"
  *               password:
  *                 type: string
- *                 description: "비밀번호 (SHA256 등 암호화 저장 권장)"
  *                 example: "Coffee1234"
  *               name:
  *                 type: string
- *                 description: "사용자 이름"
  *                 example: "김커피"
  *               birth_year:
  *                 type: integer
- *                 description: "출생 연도"
  *                 example: 1990
  *               birth_date:
  *                 type: string
  *                 format: date
- *                 description: "출생 일자"
  *                 example: "1990-05-01"
  *               gender:
  *                 type: string
- *                 description: "성별 (M/F)"
  *                 example: "M"
  *               phone_number:
  *                 type: string
- *                 description: "인증된 휴대폰 번호"
  *                 example: "01012345678"
  *               verification_code:
  *                 type: string
- *                 description: "휴대폰 인증 완료된 6자리 코드"
  *                 example: "123456"
  *               terms_agreed:
  *                 type: boolean
- *                 description: "이용약관 동의 여부"
  *                 example: true
  *               privacy_agreed:
  *                 type: boolean
- *                 description: "개인정보 처리방침 동의 여부"
  *                 example: true
  *               marketing_agreed:
  *                 type: boolean
- *                 description: "마케팅 수신 동의 여부"
  *                 example: false
  *               ip_address:
  *                 type: string
- *                 description: "가입 요청자의 IP"
  *                 example: "127.0.0.1"
  *               user_agent:
  *                 type: string
- *                 description: "클라이언트 User-Agent 문자열"
  *                 example: "Swagger Test"
  *               device_type:
  *                 type: string
- *                 description: "디바이스 종류 (WEB, MOBILE)"
  *                 example: "WEB"
  *               device_id:
  *                 type: string
- *                 description: "디바이스 고유 ID"
  *                 example: "TEST-DEVICE"
  *               app_version:
  *                 type: string
- *                 description: "앱 버전"
  *                 example: "1.0"
+ *     responses:
+ *       200:
+ *         description: 회원가입 결과
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 output:
+ *                   type: object
+ *                   properties:
+ *                     p_user_id:
+ *                       type: integer
+ *                       example: 101
+ *                     p_session_id:
+ *                       type: string
+ *                       example: "b3f5d97a-9c3e-4a28-bc7c-2d4b3a..."
+ *                     p_result_code:
+ *                       type: string
+ *                       enum: [SUCCESS, MISSING_REQUIRED, TERMS_NOT_AGREED, PHONE_NOT_VERIFIED, EMAIL_DUPLICATE, PHONE_DUPLICATE, INVALID_EMAIL, INVALID_PHONE, INVALID_PASSWORD, PASSWORD_FORMAT, INVALID_NAME, ERROR]
+ *                       example: SUCCESS
+ *                     p_result_message:
+ *                       type: string
+ *                       example: "회원가입이 완료되었습니다."
+ *                 recordset:
+ *                   type: array
+ *                   items: {}
+ *                 rowsAffected:
+ *                   type: array
+ *                   items: {}
  */
 app.post("/signup", async (req, res) => {
   try {
