@@ -1,0 +1,14 @@
+# Node.js 의존성 폴더
+node_modules
+
+# 환경 변수 (DB 비밀번호 등 민감 정보)
+.env
+
+# 로그 파일
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 빌드 결과물 (만약 있으면)
+dist
+build
