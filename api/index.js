@@ -6,24 +6,42 @@ const swaggerJsdoc = require("swagger-jsdoc");
 const app = express();
 app.use(bodyParser.json());
 
-// DB 연결 설정 (SQL Server)
-const pool = new sql.ConnectionPool({
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  server: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT, 10),
-  options: {
-    encrypt: false, // Azure 등 클라우드면 true
-    trustServerCertificate: true,
-  },
-});
+// =========================
+// 🔹 DB 풀 캐싱 함수
+// =========================
+let poolPromise;
 
-pool.connect()
-  .then(() => console.log("✅ DB Connected"))
-  .catch(err => console.error("❌ DB Connection Failed:", err));
+async function getPool() {
+  if (!poolPromise) {
+    const pool = new sql.ConnectionPool({
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
+      server: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT, 10),
+      options: {
+        encrypt: false, // Azure면 true
+        trustServerCertificate: true,
+      },
+    });
 
-// Swagger 설정
+    poolPromise = pool.connect()
+      .then(p => {
+        console.log("✅ DB Connected");
+        return p;
+      })
+      .catch(err => {
+        poolPromise = null;
+        console.error("❌ DB Connection Failed:", err);
+        throw err;
+      });
+  }
+  return poolPromise;
+}
+
+// =========================
+// 🔹 Swagger 설정
+// =========================
 const options = {
   definition: {
     openapi: "3.0.0",
@@ -65,10 +83,10 @@ app.get("/docs", (req, res) => {
  * /phone/request:
  *   post:
  *     summary: 휴대폰 인증번호 발송
- *     description: DB 프로시저(PRC_COF_PHONE_REQUEST)를 호출하여 인증번호를 발송합니다.
  */
 app.post("/phone/request", async (req, res) => {
   try {
+    const pool = await getPool();
     const { phone_number, purpose } = req.body;
     const request = pool.request();
     request.input("p_phone_number", sql.VarChar(20), phone_number);
@@ -86,10 +104,10 @@ app.post("/phone/request", async (req, res) => {
  * /phone/verify:
  *   post:
  *     summary: 휴대폰 인증번호 확인
- *     description: DB 프로시저(PRC_COF_PHONE_VERIFY)를 호출하여 인증번호를 검증합니다.
  */
 app.post("/phone/verify", async (req, res) => {
   try {
+    const pool = await getPool();
     const { phone_number, verification_code, purpose } = req.body;
     const request = pool.request();
     request.input("p_phone_number", sql.VarChar(20), phone_number);
@@ -108,10 +126,10 @@ app.post("/phone/verify", async (req, res) => {
  * /signup:
  *   post:
  *     summary: 회원가입
- *     description: DB 프로시저(PRC_COF_USER_SIGNUP)를 호출하여 신규 회원을 생성합니다.
  */
 app.post("/signup", async (req, res) => {
   try {
+    const pool = await getPool();
     const input = req.body;
     const request = pool.request();
 
