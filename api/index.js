@@ -111,6 +111,9 @@ app.get("/health", async (req, res) => {
  *               purpose:
  *                 type: string
  *                 example: "SIGNUP"
+ *               user_id:
+ *                 type: integer
+ *                 example: 1
  *     responses:
  *       200:
  *         description: 인증번호 발송 결과
@@ -118,15 +121,21 @@ app.get("/health", async (req, res) => {
 app.post("/phone/request", async (req, res) => {
   try {
     const pool = await getPool();
-    const { phone_number, purpose } = req.body;
+    const { phone_number, purpose, user_id } = req.body;
     const request = pool.request();
     request.input("p_phone_number", sql.VarChar(20), phone_number);
     request.input("p_purpose", sql.VarChar(20), purpose || "SIGNUP");
+    request.input("p_user_id", sql.Int, user_id || null);
+
+    request.output("p_verification_code", sql.VarChar(6));
+    request.output("p_result_code", sql.VarChar(50));
+    request.output("p_result_message", sql.NVarChar(255));
 
     const result = await request.execute("PRC_COF_PHONE_REQUEST");
+
     res.json({
-      recordset: result.recordset || [],
       output: result.output || {},
+      recordset: result.recordset || [],
       rowsAffected: result.rowsAffected || [],
     });
   } catch (err) {
@@ -172,10 +181,15 @@ app.post("/phone/verify", async (req, res) => {
     request.input("p_verification_code", sql.VarChar(6), verification_code);
     request.input("p_purpose", sql.VarChar(20), purpose || "SIGNUP");
 
+    request.output("p_verification_id", sql.Int);
+    request.output("p_result_code", sql.VarChar(50));
+    request.output("p_result_message", sql.NVarChar(255));
+
     const result = await request.execute("PRC_COF_PHONE_VERIFY");
+
     res.json({
-      recordset: result.recordset || [],
       output: result.output || {},
+      recordset: result.recordset || [],
       rowsAffected: result.rowsAffected || [],
     });
   } catch (err) {
@@ -261,7 +275,7 @@ app.post("/signup", async (req, res) => {
     const input = req.body;
     const request = pool.request();
 
-    request.input("p_validation_mode", sql.VarChar(20), input.validation_mode);
+    request.input("p_validation_mode", sql.VarChar(20), input.validation_mode || "FULL_SIGNUP");
     request.input("p_email", sql.NVarChar(255), input.email);
     request.input("p_password", sql.VarChar(255), input.password);
     request.input("p_name", sql.NVarChar(100), input.name);
