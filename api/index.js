@@ -31,6 +31,33 @@ const swaggerSpec = swaggerJsdoc(options);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // API
+/**
+ * @openapi
+ * /users:
+ *   get:
+ *     summary: 모든 사용자 조회
+ *     responses:
+ *       200:
+ *         description: 사용자 목록 반환
+ *   post:
+ *     summary: 사용자 생성
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 생성된 사용자 반환
+ */
+
+
 app.get("/users", async (req, res) => {
   const [rows] = await pool.query("SELECT * FROM users");
   res.json(rows);
