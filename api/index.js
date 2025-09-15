@@ -19,7 +19,7 @@ async function getPool() {
       server: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT, 10),
       options: {
-        encrypt: false, // Azure 같은 경우 true
+        encrypt: false,
         trustServerCertificate: true,
       },
     });
@@ -98,6 +98,22 @@ app.get("/health", async (req, res) => {
  * /phone/request:
  *   post:
  *     summary: 휴대폰 인증번호 발송
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone_number:
+ *                 type: string
+ *                 example: "01012345678"
+ *               purpose:
+ *                 type: string
+ *                 example: "SIGNUP"
+ *     responses:
+ *       200:
+ *         description: 인증번호 발송 결과
  */
 app.post("/phone/request", async (req, res) => {
   try {
@@ -127,6 +143,25 @@ app.post("/phone/request", async (req, res) => {
  * /phone/verify:
  *   post:
  *     summary: 휴대폰 인증번호 확인
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phone_number:
+ *                 type: string
+ *                 example: "01012345678"
+ *               verification_code:
+ *                 type: string
+ *                 example: "123456"
+ *               purpose:
+ *                 type: string
+ *                 example: "SIGNUP"
+ *     responses:
+ *       200:
+ *         description: 인증번호 확인 결과
  */
 app.post("/phone/verify", async (req, res) => {
   try {
@@ -157,6 +192,68 @@ app.post("/phone/verify", async (req, res) => {
  * /signup:
  *   post:
  *     summary: 회원가입
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               validation_mode:
+ *                 type: string
+ *                 example: "FULL_SIGNUP"
+ *               email:
+ *                 type: string
+ *                 example: "coffeeuser@example.com"
+ *               password:
+ *                 type: string
+ *                 example: "Coffee1234"
+ *               name:
+ *                 type: string
+ *                 example: "김커피"
+ *               birth_year:
+ *                 type: integer
+ *                 example: 1990
+ *               birth_date:
+ *                 type: string
+ *                 format: date
+ *                 example: "1990-05-01"
+ *               gender:
+ *                 type: string
+ *                 example: "M"
+ *               phone_number:
+ *                 type: string
+ *                 example: "01012345678"
+ *               verification_code:
+ *                 type: string
+ *                 example: "123456"
+ *               terms_agreed:
+ *                 type: boolean
+ *                 example: true
+ *               privacy_agreed:
+ *                 type: boolean
+ *                 example: true
+ *               marketing_agreed:
+ *                 type: boolean
+ *                 example: false
+ *               ip_address:
+ *                 type: string
+ *                 example: "127.0.0.1"
+ *               user_agent:
+ *                 type: string
+ *                 example: "Swagger Test"
+ *               device_type:
+ *                 type: string
+ *                 example: "WEB"
+ *               device_id:
+ *                 type: string
+ *                 example: "TEST-DEVICE"
+ *               app_version:
+ *                 type: string
+ *                 example: "1.0"
+ *     responses:
+ *       200:
+ *         description: 회원가입 결과
  */
 app.post("/signup", async (req, res) => {
   try {
