@@ -98,40 +98,39 @@ app.get("/health", async (req, res) => {
  * /phone/request:
  *   post:
  *     summary: 휴대폰 인증번호 발송
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               phone_number:
- *                 type: string
- *                 example: "01012345678"
- *               purpose:
- *                 type: string
- *                 example: "SIGNUP"
- *     responses:
- *       200:
- *         description: 인증번호 발송 결과
+ *     description: |
+ *       - **회원가입(SIGNUP)**: `user_id`는 반드시 null  
+ *       - **기존 회원**: 실제 DB에 존재하는 user_id 필요  
+ *       - 잘못된 user_id를 넣으면 Foreign Key 오류 발생
  */
 app.post("/phone/request", async (req, res) => {
   try {
     const pool = await getPool();
-    const { phone_number, purpose } = req.body;
+    const { phone_number, purpose, user_id } = req.body;
     const request = pool.request();
     request.input("p_phone_number", sql.VarChar(20), phone_number);
     request.input("p_purpose", sql.VarChar(20), purpose || "SIGNUP");
+    request.input("p_user_id", sql.Int, user_id || null);
+
+    request.output("p_verification_code", sql.VarChar(6));
+    request.output("p_result_code", sql.VarChar(50));
+    request.output("p_result_message", sql.NVarChar(255));
 
     const result = await request.execute("PRC_COF_PHONE_REQUEST");
+
     res.json({
-      recordset: result.recordset || [],
+      input: req.body,
       output: result.output || {},
-      rowsAffected: result.rowsAffected || [],
+      recordset: result.recordset || [],
+      rowsAffected: result.rowsAffected || []
     });
   } catch (err) {
     console.error("❌ /phone/request error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: true,
+      message: err.message,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+    });
   }
 });
 
@@ -143,25 +142,10 @@ app.post("/phone/request", async (req, res) => {
  * /phone/verify:
  *   post:
  *     summary: 휴대폰 인증번호 확인
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               phone_number:
- *                 type: string
- *                 example: "01012345678"
- *               verification_code:
- *                 type: string
- *                 example: "123456"
- *               purpose:
- *                 type: string
- *                 example: "SIGNUP"
- *     responses:
- *       200:
- *         description: 인증번호 확인 결과
+ *     description: |
+ *       발송받은 인증번호(`verification_code`)를 입력해 검증합니다.  
+ *       - 인증번호가 일치하면 `p_result_code = SUCCESS`  
+ *       - 틀리면 `ERROR` 반환
  */
 app.post("/phone/verify", async (req, res) => {
   try {
@@ -172,15 +156,25 @@ app.post("/phone/verify", async (req, res) => {
     request.input("p_verification_code", sql.VarChar(6), verification_code);
     request.input("p_purpose", sql.VarChar(20), purpose || "SIGNUP");
 
+    request.output("p_verification_id", sql.Int);
+    request.output("p_result_code", sql.VarChar(50));
+    request.output("p_result_message", sql.NVarChar(255));
+
     const result = await request.execute("PRC_COF_PHONE_VERIFY");
+
     res.json({
-      recordset: result.recordset || [],
+      input: req.body,
       output: result.output || {},
-      rowsAffected: result.rowsAffected || [],
+      recordset: result.recordset || [],
+      rowsAffected: result.rowsAffected || []
     });
   } catch (err) {
     console.error("❌ /phone/verify error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: true,
+      message: err.message,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+    });
   }
 });
 
@@ -192,68 +186,10 @@ app.post("/phone/verify", async (req, res) => {
  * /signup:
  *   post:
  *     summary: 회원가입
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               validation_mode:
- *                 type: string
- *                 example: "FULL_SIGNUP"
- *               email:
- *                 type: string
- *                 example: "coffeeuser@example.com"
- *               password:
- *                 type: string
- *                 example: "Coffee1234"
- *               name:
- *                 type: string
- *                 example: "김커피"
- *               birth_year:
- *                 type: integer
- *                 example: 1990
- *               birth_date:
- *                 type: string
- *                 format: date
- *                 example: "1990-05-01"
- *               gender:
- *                 type: string
- *                 example: "M"
- *               phone_number:
- *                 type: string
- *                 example: "01012345678"
- *               verification_code:
- *                 type: string
- *                 example: "123456"
- *               terms_agreed:
- *                 type: boolean
- *                 example: true
- *               privacy_agreed:
- *                 type: boolean
- *                 example: true
- *               marketing_agreed:
- *                 type: boolean
- *                 example: false
- *               ip_address:
- *                 type: string
- *                 example: "127.0.0.1"
- *               user_agent:
- *                 type: string
- *                 example: "Swagger Test"
- *               device_type:
- *                 type: string
- *                 example: "WEB"
- *               device_id:
- *                 type: string
- *                 example: "TEST-DEVICE"
- *               app_version:
- *                 type: string
- *                 example: "1.0"
- *     responses:
- *       200:
- *         description: 회원가입 결과
+ *     description: |
+ *       - 휴대폰 인증이 완료된 후 진행해야 합니다.  
+ *       - 필수값: `email`, `password`, `name`, `phone_number`, `verification_code`, 약관동의(`terms_agreed`, `privacy_agreed`)  
+ *       - `validation_mode`는 기본 "FULL_SIGNUP"
  */
 app.post("/signup", async (req, res) => {
   try {
@@ -261,7 +197,7 @@ app.post("/signup", async (req, res) => {
     const input = req.body;
     const request = pool.request();
 
-    request.input("p_validation_mode", sql.VarChar(20), input.validation_mode);
+    request.input("p_validation_mode", sql.VarChar(20), input.validation_mode || "FULL_SIGNUP");
     request.input("p_email", sql.NVarChar(255), input.email);
     request.input("p_password", sql.VarChar(255), input.password);
     request.input("p_name", sql.NVarChar(100), input.name);
@@ -287,13 +223,18 @@ app.post("/signup", async (req, res) => {
     const result = await request.execute("PRC_COF_USER_SIGNUP");
 
     res.json({
+      input: req.body,
       output: result.output || {},
       recordset: result.recordset || [],
-      rowsAffected: result.rowsAffected || [],
+      rowsAffected: result.rowsAffected || []
     });
   } catch (err) {
     console.error("❌ /signup error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: true,
+      message: err.message,
+      stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+    });
   }
 });
 
