@@ -1,7 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mysql = require("mysql2/promise");
-const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
 
 const app = express();
@@ -24,24 +23,41 @@ const options = {
       version: "1.0.0",
     },
   },
-  apis: ["./api/*.js"], // api 폴더 안 js 파일 전체 검색
+  apis: [__filename], // 현재 파일을 기준으로 주석 읽기
 };
 
 const swaggerSpec = swaggerJsdoc(options);
 
-// Swagger UI
-app.use(
-    "/api-docs",
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, { explorer: true })
-  );
-
-// Swagger JSON 디버깅용 라우트 (Swagger 스펙 확인용)
+// Swagger JSON 출력 (디버깅/연동용)
 app.get("/swagger.json", (req, res) => {
   res.json(swaggerSpec);
 });
 
-// API
+// Swagger UI (CDN 방식)
+app.get("/docs", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Swagger UI</title>
+        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" />
+      </head>
+      <body>
+        <div id="swagger-ui"></div>
+        <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+        <script>
+          window.onload = () => {
+            SwaggerUIBundle({
+              url: '/swagger.json',
+              dom_id: '#swagger-ui'
+            });
+          };
+        </script>
+      </body>
+    </html>
+  `);
+});
+
 /**
  * @openapi
  * /users:
@@ -68,17 +84,25 @@ app.get("/swagger.json", (req, res) => {
  *         description: 생성된 사용자 반환
  */
 app.get("/users", async (req, res) => {
-  const [rows] = await pool.query("SELECT * FROM users");
-  res.json(rows);
+  try {
+    const [rows] = await pool.query("SELECT * FROM users");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/users", async (req, res) => {
-  const { name, email } = req.body;
-  const [result] = await pool.query(
-    "INSERT INTO users (name, email) VALUES (?, ?)",
-    [name, email]
-  );
-  res.json({ id: result.insertId, name, email });
+  try {
+    const { name, email } = req.body;
+    const [result] = await pool.query(
+      "INSERT INTO users (name, email) VALUES (?, ?)",
+      [name, email]
+    );
+    res.json({ id: result.insertId, name, email });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Vercel은 핸들러 export 필요
