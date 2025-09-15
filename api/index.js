@@ -98,6 +98,10 @@ app.get("/health", async (req, res) => {
  * /phone/request:
  *   post:
  *     summary: 휴대폰 인증번호 발송
+ *     description: |
+ *       - **회원가입(SIGNUP)**: `user_id`는 반드시 null  
+ *       - **기존 회원**: 실제 DB에 존재하는 user_id 필요  
+ *       - 잘못된 user_id를 넣으면 Foreign Key 오류 발생
  *     requestBody:
  *       required: true
  *       content:
@@ -107,13 +111,16 @@ app.get("/health", async (req, res) => {
  *             properties:
  *               phone_number:
  *                 type: string
+ *                 description: "사용자 휴대폰 번호 (예: 01012345678)"
  *                 example: "01012345678"
  *               purpose:
  *                 type: string
+ *                 description: "인증 목적 (SIGNUP=회원가입, PASSWORD_RESET=비밀번호 재설정)"
  *                 example: "SIGNUP"
  *               user_id:
  *                 type: integer
- *                 example: 1
+ *                 description: "기존 회원일 경우 DB에 존재하는 user_id, 신규 회원가입 시 null"
+ *                 example: null
  *     responses:
  *       200:
  *         description: 인증번호 발송 결과
@@ -152,6 +159,10 @@ app.post("/phone/request", async (req, res) => {
  * /phone/verify:
  *   post:
  *     summary: 휴대폰 인증번호 확인
+ *     description: |
+ *       발송받은 인증번호(`verification_code`)를 입력해 검증합니다.  
+ *       - 인증번호가 일치하면 `p_result_code = SUCCESS`  
+ *       - 틀리면 `ERROR` 반환
  *     requestBody:
  *       required: true
  *       content:
@@ -161,16 +172,16 @@ app.post("/phone/request", async (req, res) => {
  *             properties:
  *               phone_number:
  *                 type: string
+ *                 description: "인증받은 휴대폰 번호"
  *                 example: "01012345678"
  *               verification_code:
  *                 type: string
+ *                 description: "발송받은 6자리 인증번호"
  *                 example: "123456"
  *               purpose:
  *                 type: string
+ *                 description: "인증 목적 (기본값 SIGNUP)"
  *                 example: "SIGNUP"
- *     responses:
- *       200:
- *         description: 인증번호 확인 결과
  */
 app.post("/phone/verify", async (req, res) => {
   try {
@@ -206,6 +217,10 @@ app.post("/phone/verify", async (req, res) => {
  * /signup:
  *   post:
  *     summary: 회원가입
+ *     description: |
+ *       - 휴대폰 인증이 완료된 후 진행해야 합니다.  
+ *       - 필수값: `email`, `password`, `name`, `phone_number`, `verification_code`, 약관동의(`terms_agreed`, `privacy_agreed`)  
+ *       - `validation_mode`는 기본 "FULL_SIGNUP"
  *     requestBody:
  *       required: true
  *       content:
@@ -215,59 +230,73 @@ app.post("/phone/verify", async (req, res) => {
  *             properties:
  *               validation_mode:
  *                 type: string
+ *                 description: "검증 모드 (기본값 FULL_SIGNUP)"
  *                 example: "FULL_SIGNUP"
  *               email:
  *                 type: string
+ *                 description: "사용자 이메일 (로그인 계정)"
  *                 example: "coffeeuser@example.com"
  *               password:
  *                 type: string
+ *                 description: "비밀번호 (SHA256 등 암호화 저장 권장)"
  *                 example: "Coffee1234"
  *               name:
  *                 type: string
+ *                 description: "사용자 이름"
  *                 example: "김커피"
  *               birth_year:
  *                 type: integer
+ *                 description: "출생 연도"
  *                 example: 1990
  *               birth_date:
  *                 type: string
  *                 format: date
+ *                 description: "출생 일자"
  *                 example: "1990-05-01"
  *               gender:
  *                 type: string
+ *                 description: "성별 (M/F)"
  *                 example: "M"
  *               phone_number:
  *                 type: string
+ *                 description: "인증된 휴대폰 번호"
  *                 example: "01012345678"
  *               verification_code:
  *                 type: string
+ *                 description: "휴대폰 인증 완료된 6자리 코드"
  *                 example: "123456"
  *               terms_agreed:
  *                 type: boolean
+ *                 description: "이용약관 동의 여부"
  *                 example: true
  *               privacy_agreed:
  *                 type: boolean
+ *                 description: "개인정보 처리방침 동의 여부"
  *                 example: true
  *               marketing_agreed:
  *                 type: boolean
+ *                 description: "마케팅 수신 동의 여부"
  *                 example: false
  *               ip_address:
  *                 type: string
+ *                 description: "가입 요청자의 IP"
  *                 example: "127.0.0.1"
  *               user_agent:
  *                 type: string
+ *                 description: "클라이언트 User-Agent 문자열"
  *                 example: "Swagger Test"
  *               device_type:
  *                 type: string
+ *                 description: "디바이스 종류 (WEB, MOBILE)"
  *                 example: "WEB"
  *               device_id:
  *                 type: string
+ *                 description: "디바이스 고유 ID"
  *                 example: "TEST-DEVICE"
  *               app_version:
  *                 type: string
+ *                 description: "앱 버전"
  *                 example: "1.0"
- *     responses:
- *       200:
- *         description: 회원가입 결과
  */
 app.post("/signup", async (req, res) => {
   try {
